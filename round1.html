@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мікросвіт: Атоми заліза</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #0a0a0a;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+<script>
+let atoms = [];
+let numAtoms = 60; // Кількість атомів
+let containerRadius = 190; // Радіус контейнера
+
+function setup() {
+    createCanvas(500, 500);
+    
+    // Створюємо атоми всередині кола
+    for (let i = 0; i < numAtoms; i++) {
+        let angle = random(TWO_PI);
+        let r = random(containerRadius - 15); 
+        
+        let x = width / 2 + r * cos(angle);
+        let y = height / 2 + r * sin(angle);
+        
+        atoms.push(new Atom(x, y, i));
+    }
+}
+
+function draw() {
+    background(15); // Дуже темний фон
+
+    // Текст-заголовок
+    push();
+    fill(255);
+    noStroke();
+    textAlign(CENTER);
+    textSize(18);
+    text("Поперечний зріз залізної кульки під мікроскопом", width / 2, 35);
+    textSize(14);
+    fill(150);
+    text("Збільшення: x1 000 000 000", width / 2, 55);
+    pop();
+
+    translate(width / 2, height / 2);
+
+    // Малюємо корпус контейнера
+    noFill();
+    stroke(100);
+    strokeWeight(6);
+    ellipse(0, 0, containerRadius * 2 + 6);
+    
+    // Внутрішнє поле
+    fill(30);
+    noStroke();
+    ellipse(0, 0, containerRadius * 2);
+
+    // Оновлення та відображення атомів
+    for (let atom of atoms) {
+        atom.collide(); // Перевірка зіткнень з іншими атомами
+        atom.update();
+        atom.checkWalls();
+        atom.display();
+    }
+}
+
+class Atom {
+    constructor(x, y, id) {
+        this.pos = createVector(x - width/2, y - height/2);
+        this.vel = p5.Vector.random2D().mult(random(1.5, 3)); 
+        this.radius = 7;
+        this.id = id;
+        this.mass = 1;
+    }
+
+    update() {
+        this.pos.add(this.vel);
+    }
+
+    // Логіка відштовхування атомів один від одного
+    collide() {
+        for (let i = this.id + 1; i < atoms.length; i++) {
+            let other = atoms[i];
+            let distVec = p5.Vector.sub(other.pos, this.pos);
+            let distance = distVec.mag();
+            let minDist = this.radius + other.radius;
+
+            if (distance < minDist) {
+                // Просте пружне зіткнення
+                let normal = distVec.copy().normalize();
+                let relativeVelocity = p5.Vector.sub(this.vel, other.vel);
+                let speed = relativeVelocity.dot(normal);
+
+                if (speed > 0) {
+                    let impulse = 2 * speed / (this.mass + other.mass);
+                    let impulseVec = normal.copy().mult(impulse);
+                    
+                    this.vel.sub(impulseVec);
+                    other.vel.add(impulseVec);
+                }
+                
+                // Запобігання злипанню
+                let overlap = minDist - distance;
+                let moveVec = normal.copy().mult(overlap / 2);
+                this.pos.sub(moveVec);
+                other.pos.add(moveVec);
+            }
+        }
+    }
+
+    checkWalls() {
+        let d = this.pos.mag();
+        if (d > containerRadius - this.radius) {
+            let normal = this.pos.copy().normalize();
+            
+            // Відбиття від кривої стінки
+            // v_new = v - 2 * (v . n) * n
+            let dot = this.vel.dot(normal);
+            this.vel.sub(p5.Vector.mult(normal, 2 * dot));
+            
+            // Корекція позиції
+            this.pos = normal.mult(containerRadius - this.radius);
+        }
+    }
+
+    display() {
+        push();
+        noStroke();
+        
+        // Градієнтний ефект (основне тіло)
+        fill(160, 165, 175);
+        ellipse(this.pos.x, this.pos.y, this.radius * 2);
+        
+        // Відблиск для ефекту металу
+        fill(255, 180);
+        ellipse(this.pos.x - this.radius * 0.4, this.pos.y - this.radius * 0.4, this.radius * 0.8);
+        pop();
+    }
+}
+</script>
+
+</body>
+</html>
