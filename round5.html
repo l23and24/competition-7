@@ -3,19 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Космічні перегони: Дуель у невагомості</title>
+    <title>Космічні перегони: Фіксована арена</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             margin: 0;
-            background-color: #020205;
+            background-color: #050510;
             color: white;
             font-family: 'Segoe UI', sans-serif;
             overflow: hidden;
             touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
         canvas {
-            display: block;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border: 2px solid #1e293b;
+            background: #020205;
         }
         .ui-overlay {
             position: absolute;
@@ -28,17 +34,17 @@
             z-index: 20;
         }
         .player-stats {
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(15, 23, 42, 0.8);
             padding: 10px 15px;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            width: 180px;
+            width: 160px;
             backdrop-filter: blur(5px);
         }
         .fuel-bar-container {
             width: 100%;
             height: 6px;
-            background: #222;
+            background: #1e293b;
             border-radius: 3px;
             margin-top: 5px;
             overflow: hidden;
@@ -53,29 +59,30 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.95);
+            background: rgba(15, 23, 42, 0.95);
             padding: 40px;
             border-radius: 24px;
             text-align: center;
             z-index: 100;
             border: 2px solid white;
+            backdrop-filter: blur(10px);
         }
     </style>
 </head>
 <body>
 
 <div id="winMessage">
-    <h2 id="winnerText" class="text-4xl font-bold mb-4"></h2>
-    <p class="mb-6 text-gray-300">Місію завершено. Повертаємося на базу.</p>
-    <button onclick="resetGame()" class="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-200 transition">ГРАТИ ЗНОВУ</button>
+    <h2 id="winnerText" class="text-4xl font-bold mb-2 text-white"></h2>
+    <p class="mb-6 text-sky-400 font-mono tracking-widest uppercase text-sm">Об'єкт досягнуто. Місію виконано.</p>
+    <button onclick="resetGame()" class="bg-sky-500 text-white px-8 py-3 rounded-lg font-bold hover:bg-sky-400 transition transform hover:scale-105 active:scale-95">ПЕРЕЗАПУСТИТИ</button>
 </div>
 
 <div class="ui-overlay">
     <!-- Гравець 1 -->
     <div class="player-stats border-cyan-500/50">
-        <div class="text-cyan-400 font-bold text-xs">ГРАВЕЦЬ 1 (Стрілки)</div>
-        <div class="flex justify-between text-[10px] mt-1">
-            <span>ПАЛИВО</span>
+        <div class="text-cyan-400 font-bold text-xs">P1: СТРІЛКИ</div>
+        <div class="flex justify-between text-[10px] mt-1 opacity-70">
+            <span>FUEL</span>
             <span id="p1FuelText">100%</span>
         </div>
         <div class="fuel-bar-container">
@@ -85,9 +92,9 @@
 
     <!-- Гравець 2 -->
     <div class="player-stats border-green-500/50">
-        <div class="text-green-400 font-bold text-xs text-right">ГРАВЕЦЬ 2 (WASD)</div>
-        <div class="flex justify-between text-[10px] mt-1">
-            <span>ПАЛИВО</span>
+        <div class="text-green-400 font-bold text-xs text-right">P2: WASD</div>
+        <div class="flex justify-between text-[10px] mt-1 opacity-70">
+            <span>FUEL</span>
             <span id="p2FuelText">100%</span>
         </div>
         <div class="fuel-bar-container">
@@ -102,9 +109,10 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    const TILE_SIZE = 100;
-    const THRUST = 0.14;
-    const DAMPING = 0.997; 
+    // Зменшуємо розмір плитки, щоб усе влізло на екран без руху камери
+    const TILE_SIZE = 60;
+    const THRUST = 0.15;
+    const DAMPING = 0.985; 
 
     const maze = [
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -118,20 +126,25 @@
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
 
+    const ROWS = maze.length;
+    const COLS = maze[0].length;
+    const WORLD_WIDTH = COLS * TILE_SIZE;
+    const WORLD_HEIGHT = ROWS * TILE_SIZE;
+
     let exitPos = { x: 1.5 * TILE_SIZE, y: 7.5 * TILE_SIZE };
+    let gameActive = true;
 
     function createPlayer(id, x, y, color, controls) {
         return {
             id, x, y, color, controls,
-            vx: 0, vy: 0, radius: 18, fuel: 100, angle: 0,
-            activeThrust: { up: false, down: false, left: false, right: false }
+            vx: 0, vy: 0, radius: 12, fuel: 100, angle: 0
         };
     }
 
-    let p1 = createPlayer(1, 13.5 * TILE_SIZE, 1.5 * TILE_SIZE, '#06b6d4', {
+    let p1 = createPlayer(1, (COLS - 1.5) * TILE_SIZE, 1.5 * TILE_SIZE, '#06b6d4', {
         up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right: 'arrowright'
     });
-    let p2 = createPlayer(2, 13.5 * TILE_SIZE, 7.5 * TILE_SIZE, '#22c55e', {
+    let p2 = createPlayer(2, (COLS - 1.5) * TILE_SIZE, 7.5 * TILE_SIZE, '#22c55e', {
         up: 'w', down: 's', left: 'a', right: 'd'
     });
 
@@ -144,11 +157,13 @@
     function getCell(x, y) {
         const gx = Math.floor(x / TILE_SIZE);
         const gy = Math.floor(y / TILE_SIZE);
-        if (gy >= 0 && gy < maze.length && gx >= 0 && gx < maze[0].length) return maze[gy][gx];
+        if (gy >= 0 && gy < ROWS && gx >= 0 && gx < COLS) return maze[gy][gx];
         return 1;
     }
 
     function updatePlayer(p) {
+        if (!gameActive) return;
+
         if (p.fuel > 0) {
             let thrusting = false;
             if (keys[p.controls.up]) { p.vy -= THRUST; thrusting = true; }
@@ -157,7 +172,7 @@
             if (keys[p.controls.right]) { p.vx += THRUST; thrusting = true; }
             
             if(thrusting) {
-                p.fuel -= 0.1;
+                p.fuel -= 0.12;
                 p.angle = Math.atan2(p.vy, p.vx);
             }
         }
@@ -165,23 +180,32 @@
         p.vx *= DAMPING;
         p.vy *= DAMPING;
 
+        // Колізії по X
         let nx = p.x + p.vx;
-        let ny = p.y + p.vy;
         const pad = p.radius;
+        if (getCell(nx - pad, p.y) === 1 || getCell(nx + pad, p.y) === 1) {
+            p.vx *= -0.6; // Відскік
+        } else {
+            p.x = nx;
+        }
 
-        if (getCell(nx - pad, p.y) === 1 || getCell(nx + pad, p.y) === 1) p.vx *= -0.5;
-        else p.x = nx;
+        // Колізії по Y
+        let ny = p.y + p.vy;
+        if (getCell(p.x, ny - pad) === 1 || getCell(p.x, ny + pad) === 1) {
+            p.vy *= -0.6; // Відскік
+        } else {
+            p.y = ny;
+        }
 
-        if (getCell(p.x, ny - pad) === 1 || getCell(p.x, ny + pad) === 1) p.vy *= -0.5;
-        else p.y = ny;
-
+        // Перевірка фінішу
         if (getCell(p.x, p.y) === 3) endGame(p.id);
     }
 
     function endGame(id) {
+        gameActive = false;
         document.getElementById('winMessage').style.display = 'block';
         document.getElementById('winMessage').style.borderColor = id === 1 ? '#06b6d4' : '#22c55e';
-        document.getElementById('winnerText').innerText = `ПЕРЕМІГ ГРАВЕЦЬ ${id}!`;
+        document.getElementById('winnerText').innerText = `ГРАВЕЦЬ ${id} ВИГРАВ!`;
         document.getElementById('winnerText').style.color = id === 1 ? '#06b6d4' : '#22c55e';
     }
 
@@ -192,30 +216,24 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Камера слідує за центром між гравцями
-        const midX = (p1.x + p2.x) / 2;
-        const midY = (p1.y + p2.y) / 2;
-        const camX = -midX + canvas.width / 2;
-        const camY = -midY + canvas.height / 2;
-        
-        ctx.save();
-        ctx.translate(camX, camY);
-
-        // Малювання лабіринту
-        for (let r = 0; r < maze.length; r++) {
-            for (let c = 0; c < maze[r].length; c++) {
+        // Малювання лабіринту (статичне)
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
                 const x = c * TILE_SIZE;
                 const y = r * TILE_SIZE;
+                
                 if (maze[r][c] === 1) {
-                    ctx.fillStyle = '#111827';
+                    ctx.fillStyle = '#1e293b';
                     ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#374151';
-                    ctx.strokeRect(x+5, y+5, TILE_SIZE-10, TILE_SIZE-10);
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
                 } else if (maze[r][c] === 3) {
-                    ctx.fillStyle = '#f87171';
-                    ctx.shadowBlur = 20;
-                    ctx.shadowColor = '#ef4444';
-                    ctx.fillRect(x+20, y+20, TILE_SIZE-40, TILE_SIZE-40);
+                    // Фінішна зона (портал)
+                    const pulse = Math.sin(Date.now() / 200) * 5;
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.shadowBlur = 15 + pulse;
+                    ctx.shadowColor = '#f43f5e';
+                    ctx.fillRect(x + 10 - pulse/2, y + 10 - pulse/2, TILE_SIZE - 20 + pulse, TILE_SIZE - 20 + pulse);
                     ctx.shadowBlur = 0;
                 }
             }
@@ -225,38 +243,38 @@
             ctx.save();
             ctx.translate(p.x, p.y);
             
-            // Компас
+            // Стрілка-компас на вихід
             const dx = exitPos.x - p.x;
             const dy = exitPos.y - p.y;
             ctx.save();
             ctx.rotate(Math.atan2(dy, dx));
             ctx.fillStyle = p.color;
-            ctx.globalAlpha = 0.4;
+            ctx.globalAlpha = 0.3;
             ctx.beginPath();
-            ctx.moveTo(35, 0); ctx.lineTo(25, -6); ctx.lineTo(25, 6); ctx.fill();
+            ctx.moveTo(25, 0); ctx.lineTo(18, -4); ctx.lineTo(18, 4); ctx.fill();
             ctx.restore();
 
-            // Вогонь
+            // Ефект двигуна
             if (p.fuel > 0 && (keys[p.controls.up] || keys[p.controls.down] || keys[p.controls.left] || keys[p.controls.right])) {
                 ctx.fillStyle = "#fbbf24";
                 ctx.beginPath();
-                ctx.arc((Math.random()-0.5)*10, (Math.random()-0.5)*10, 8, 0, Math.PI*2);
+                ctx.arc((Math.random()-0.5)*8, (Math.random()-0.5)*8, 6, 0, Math.PI*2);
                 ctx.fill();
             }
 
-            // Космонавт
+            // Космонавт (спрощений вид зверху)
             ctx.rotate(p.angle);
             ctx.fillStyle = p.color;
             ctx.beginPath();
-            ctx.roundRect(-15, -15, 30, 30, 8);
+            ctx.roundRect(-10, -10, 20, 20, 5);
             ctx.fill();
+            
+            // Візор шолома
             ctx.fillStyle = "#000";
-            ctx.fillRect(5, -8, 6, 16);
+            ctx.fillRect(2, -6, 5, 12);
             
             ctx.restore();
         });
-
-        ctx.restore();
 
         // Оновлення UI
         document.getElementById('p1FuelBar').style.width = p1.fuel + '%';
@@ -272,11 +290,11 @@
     }
 
     function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        // Підганяємо розмір канвасу під розмір світу
+        canvas.width = WORLD_WIDTH;
+        canvas.height = WORLD_HEIGHT;
     }
 
-    window.addEventListener('resize', resize);
     resize();
     gameLoop();
 </script>
