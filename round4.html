@@ -3,157 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Фізичний детектив: Операція "Антифізика"</title>
+    <title>Аномальне зіткнення: Тепловоз і вагони</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Montserrat', sans-serif;
-            background-color: #1a1a1a;
-            color: #e0e0e0;
-            background-image: 
-                radial-gradient(circle at 20% 30%, rgba(50, 50, 50, 0.5) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(30, 30, 30, 0.5) 0%, transparent 50%);
+            margin: 0;
+            overflow: hidden;
+            background: #0f172a;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: white;
         }
-        .detective-font {
-            font-family: 'Special Elite', cursive;
+        canvas {
+            display: block;
         }
-        .card-glass {
-            background: rgba(40, 40, 40, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: inherit;
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            gap: 20px;
+            pointer-events: auto;
         }
-        .card-glass:hover {
-            transform: translateY(-5px);
-            border-color: #fbbf24;
-            box-shadow: 0 10px 20px rgba(251, 191, 36, 0.2);
-        }
-        .stamp {
-            transform: rotate(-15deg);
-            border: 3px solid #ef4444;
-            color: #ef4444;
-            padding: 5px 15px;
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
             font-weight: bold;
-            display: inline-block;
+            transition: all 0.2s;
+            cursor: pointer;
             text-transform: uppercase;
+            font-size: 12px;
         }
-        .pulse-red {
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
+        .btn-blue { background: #0284c7; color: white; }
+        .btn-blue:hover { background: #0369a1; }
+        .btn-red { background: #e11d48; color: white; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+<body>
 
-    <!-- Header Section -->
-    <header class="max-w-4xl w-full text-center mb-12 relative">
-        <div class="stamp absolute -top-4 -left-4 md:-left-12 detective-font text-xl md:text-2xl border-4 opacity-80">Цілком Таємно</div>
-        <h1 class="text-4xl md:text-6xl font-bold mb-4 detective-font text-yellow-500 uppercase tracking-tighter">
-            Операція "Антифізика"
-        </h1>
-        <p class="text-xl md:text-2xl text-gray-400 font-light italic">
-            Позакласний захід з фізики для 7 класу
-        </p>
-        <div class="h-1 w-32 bg-yellow-600 mx-auto mt-6"></div>
-    </header>
+<div class="ui-overlay">
+    <h1 class="text-3xl font-black italic tracking-tighter">RAILWAY COLLISION</h1>
+</div>
 
-    <!-- Main Game Menu -->
-    <main class="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="controls">
+    <button class="btn btn-blue" onclick="startCollision('empty')">Зіткнення з ПОРОЖНІМ</button>
+    <button class="btn btn-blue" onclick="startCollision('heavy')">Зіткнення з НАВАНТАЖЕНИМ</button>
+    <button class="btn btn-red" onclick="resetSim()">Скидання</button>
+</div>
+
+<canvas id="simCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+    let locomotive = { x: -200, y: 0, w: 180, h: 80, v: 0, color: '#0ea5e9' };
+    let wagon = { x: 0, y: 0, w: 160, h: 80, v: 0, type: 'empty', color: '#64748b' };
+    let particles = [];
+
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        resetSim();
+    }
+
+    function resetSim() {
+        locomotive.x = 100;
+        locomotive.v = 0;
+        wagon.x = width - 300;
+        wagon.v = 0;
+        wagon.type = 'empty';
+        wagon.color = '#64748b';
+        particles = [];
+        locomotive.y = wagon.y = height / 2;
+    }
+
+    function startCollision(type) {
+        resetSim();
+        wagon.type = type;
+        wagon.color = type === 'empty' ? '#64748b' : '#78350f';
+        locomotive.v = 8; // Початкова швидкість тепловоза
+    }
+
+    function createSpark(x, y) {
+        for(let i=0; i<20; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 1
+            });
+        }
+    }
+
+    function update() {
+        locomotive.x += locomotive.v;
+        wagon.x += wagon.v;
+
+        // Перевірка зіткнення
+        if (locomotive.x + locomotive.w >= wagon.x && locomotive.v > 0) {
+            createSpark(wagon.x, wagon.y);
+            
+            if (wagon.type === 'empty') {
+                // ПОМИЛКА: Порожній вагон поводиться як бетонна стіна
+                wagon.v = 0.5; 
+                locomotive.v = -2; // Тепловоз відскакує
+            } else {
+                // ПОМИЛКА: Важкий вагон відлітає занадто швидко
+                wagon.v = locomotive.v * 3; 
+                locomotive.v = 0.5; 
+            }
+        }
+
+        // Оновлення часток
+        particles.forEach((p, i) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.02;
+            if(p.life <= 0) particles.splice(i, 1);
+        });
+    }
+
+    function drawTrain(obj, isLoco) {
+        ctx.save();
+        ctx.translate(obj.x, obj.y - obj.h/2);
+
+        // Тінь
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(5, obj.h + 5, obj.w, 10);
+
+        // Корпус
+        ctx.fillStyle = obj.color;
+        ctx.fillRect(0, 0, obj.w, obj.h);
         
-        <!-- Round 1 -->
-        <a href="round1.html" class="card-glass p-6 rounded-lg">
-            <div>
-                <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 01</span>
-                <h2 class="text-2xl font-bold mt-2 mb-4">Вступ. Моделі речовини</h2>
-                <p class="text-gray-400 text-sm">Аналіз мікросвіту. Досліджуємо молекулярні докази та будову всесвіту на рівні частинок.</p>
-            </div>
-            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Розпочати слідство</div>
-        </a>
+        if (isLoco) {
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(obj.w - 50, -20, 40, 30);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(obj.w - 20, -10, 10, 15);
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(0, 20, obj.w - 50, 10);
+        } else {
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.strokeRect(10, 10, obj.w - 20, obj.h - 20);
+            if (wagon.type === 'heavy') {
+                ctx.fillStyle = '#451a03';
+                ctx.fillRect(5, -15, obj.w - 10, 15);
+            }
+        }
 
-        <!-- Round 2 -->
-        <a href="round2.html" class="card-glass p-6 rounded-lg">
-            <div>
-                <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 02</span>
-                <h2 class="text-2xl font-bold mt-2 mb-4">Рівномірний прямолінійний рух</h2>
-                <p class="text-gray-400 text-sm">Пошук підозрюваного за графіком швидкості. Розраховуємо час та шлях втечі об'єкта.</p>
-            </div>
-            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Перевірити докази</div>
-        </a>
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.arc(30, obj.h, 12, 0, Math.PI * 2);
+        ctx.arc(obj.w - 30, obj.h, 12, 0, Math.PI * 2);
+        ctx.fill();
 
-        <!-- Round 3 -->
-        <a href="round3.html" class="card-glass p-6 rounded-lg">
-            <div>
-                <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 03</span>
-                <h2 class="text-2xl font-bold mt-2 mb-4">Явище інерції</h2>
-                <p class="text-gray-400 text-sm">Чому тіла не хочуть зупинятися? Розслідування причин порушення спокою та наслідків інерції.</p>
-            </div>
-            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Допитати свідків</div>
-        </a>
+        ctx.restore();
+    }
 
-        <!-- Round 4 -->
-        <a href="round4.html" class="card-glass p-6 rounded-lg">
-            <div>
-                <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 04</span>
-                <h2 class="text-2xl font-bold mt-2 mb-4">Інертність та маса тіла</h2>
-                <p class="text-gray-400 text-sm">Встановлюємо масу "речових доказів". Чим більша інертність, тим складніше приховати сліди.</p>
-            </div>
-            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Зібрати докази</div>
-        </a>
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
 
-        <!-- Round 5 -->
-        <a href="round5.html" class="card-glass p-6 rounded-lg border-2 border-yellow-900/50">
-            <div>
-                <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 05 (Гра)</span>
-                <h2 class="text-2xl font-bold mt-2 mb-4 text-yellow-400">Змагання Космонавтів у лабіринті</h2>
-                <p class="text-gray-400 text-sm">Інтерактивна місія: провести екіпаж крізь фізичні перешкоди та знайти вихід із лабіринту.</p>
-            </div>
-            <div class="mt-6 py-2 px-4 bg-yellow-600 text-black font-bold text-center hover:bg-yellow-500 transition-colors rounded">Запустити місію</div>
-        </a>
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, height/2 + 45);
+        ctx.lineTo(width, height/2 + 45);
+        ctx.moveTo(0, height/2 + 55);
+        ctx.lineTo(width, height/2 + 55);
+        ctx.stroke();
 
-        <!-- Round 6 -->
-        <a href="round6.html" class="card-glass p-6 rounded-lg">
-            <div>
-                <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 06</span>
-                <h2 class="text-2xl font-bold mt-2 mb-4">Сили в природі</h2>
-                <p class="text-gray-400 text-sm">Фінальна очна ставка з силами тяжіння, пружності та тертя. Хто керує нашим світом?</p>
-            </div>
-            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Вердикт</div>
-        </a>
+        for(let i=0; i<width; i+=40) {
+            ctx.fillRect(i, height/2 + 45, 10, 15);
+        }
 
-        <!-- Captain's Challenge (Special) -->
-        <div class="col-span-1 md:col-span-2 lg:col-span-3 mt-8">
-            <a href="captains.html" class="bg-red-900/20 border-2 border-dashed border-red-500 rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-red-900/30 transition-all text-decoration-none">
-                <div class="flex items-center gap-6">
-                    <div class="bg-red-600 text-white p-4 rounded-full shadow-lg pulse-red">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-3xl font-bold text-red-400 detective-font uppercase">Дуель Шерлоків</h3>
-                        <p class="text-gray-300">Спеціальний конкурс для капітанів: логіка, інтуїція та знання законів Всесвіту.</p>
-                    </div>
-                </div>
-                <div class="bg-red-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-red-700 shadow-lg whitespace-nowrap">Викликати капітанів</div>
-            </a>
-        </div>
-    </main>
+        drawTrain(locomotive, true);
+        drawTrain(wagon, false);
 
-    <!-- Footer Information -->
-    <footer class="mt-16 text-gray-500 text-sm text-center border-t border-gray-800 pt-8 w-full max-w-4xl">
-        <p>© 2024 Відділ фізичних розслідувань. Усі закони Ньютона дотримуються.</p>
-        <p class="mt-2">Підготуйте калькулятори та детективні капелюхи.</p>
-    </footer>
+        particles.forEach(p => {
+            ctx.fillStyle = `rgba(253, 224, 71, ${p.life})`;
+            ctx.fillRect(p.x, p.y, 3, 3);
+        });
+    }
+
+    function animate() {
+        update();
+        draw();
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    animate();
+</script>
 
 </body>
 </html>
