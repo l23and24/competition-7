@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Симуляція: Аномальний графік</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+// Змінні для руху автомобіля
+let carX = 50; // Початкова позиція автомобіля
+let carY = 320; // Позиція автомобіля по вертикалі
+let carSpeed = 2; // Швидкість автомобіля для анімації (не км/год)
+let carWidth = 80;
+let carHeight = 40;
+
+// Змінні для графіка
+let graphX = 100; // Початкова точка графіка по горизонталі
+let graphY = 150; // Точка осі часу (t)
+let graphHeight = 100; // Максимальна висота осі шляху (l)
+let time = 0; // Час для графіка
+let pathPoints = []; // Масив точок для малювання графіка
+
+function setup() {
+    createCanvas(600, 400);
+}
+
+function draw() {
+    background(240); // Світлий фон
+
+    // --- Заголовок та інтерфейс ---
+    fill(0);
+    noStroke();
+    textAlign(CENTER);
+    textSize(18);
+    text("Симуляція: Рівномірний прямолінійний рух", width / 2, 30);
+    
+    // Спідометр
+    push();
+    fill(255);
+    stroke(0);
+    strokeWeight(2);
+    rect(width - 150, 60, 130, 60, 10);
+    fill(0);
+    noStroke();
+    textAlign(CENTER);
+    textSize(16);
+    text("СПІДОМЕТР", width - 85, 80);
+    textSize(20);
+    textStyle(BOLD);
+    text("60 км/год", width - 85, 105);
+    textStyle(NORMAL);
+    pop();
+
+    // --- Малювання дороги та автомобіля ---
+    // Дорога
+    fill(100);
+    noStroke();
+    rect(0, carY + carHeight, width, 20);
+    // Розмітка
+    fill(255);
+    for (let i = 0; i < width; i += 40) {
+        rect(i + 10, carY + carHeight + 8, 20, 4);
+    }
+
+    // Автомобіль (спрощений)
+    push();
+    fill(255, 50, 50); // Червоний колір
+    stroke(0);
+    strokeWeight(2);
+    // Кузов
+    rect(carX, carY, carWidth, carHeight, 5);
+    // Дах
+    rect(carX + 15, carY - 20, carWidth - 30, 20, 5);
+    // Колеса
+    fill(0);
+    ellipse(carX + 20, carY + carHeight, 20, 20);
+    ellipse(carX + carWidth - 20, carY + carHeight, 20, 20);
+    pop();
+
+    // Логіка руху автомобіля
+    carX += carSpeed;
+    // Якщо автомобіль доїхав до краю, повертаємо його назад
+    if (carX > width) {
+        carX = -carWidth;
+    }
+
+    // --- Малювання графіка l(t) ---
+    // Осі графіка
+    stroke(0);
+    strokeWeight(2);
+    // Вісь l (шлях)
+    line(graphX, graphY, graphX, graphY - graphHeight);
+    // Вісь t (час)
+    line(graphX, graphY, width - 50, graphY);
+    
+    // Стрілки осі
+    line(graphX, graphY - graphHeight, graphX - 5, graphY - graphHeight + 10);
+    line(graphX, graphY - graphHeight, graphX + 5, graphY - graphHeight + 10);
+    line(width - 50, graphY, width - 60, graphY - 5);
+    line(width - 50, graphY, width - 60, graphY + 5);
+
+    // Підписи осей
+    push();
+    fill(0);
+    noStroke();
+    textAlign(RIGHT);
+    textSize(14);
+    text("l, м", graphX - 10, graphY - graphHeight + 10);
+    textAlign(CENTER);
+    text("t, с", width - 50, graphY + 20);
+    text("0", graphX - 10, graphY + 15);
+    pop();
+
+    // АНТИФІЗИЧНА ПОМИЛКА:
+    // Незважаючи на рух автомобіля, шлях на графіку не змінюється.
+    let currentPath = 40; // Стале значення шляху (аномалія)
+    pathPoints.push({ x: graphX + time, y: graphY - currentPath });
+
+    // Малювання лінії графіка
+    stroke(0, 0, 255); // Синій колір для графіка
+    strokeWeight(3);
+    noFill();
+    beginShape();
+    for (let p of pathPoints) {
+        vertex(p.x, p.y);
+    }
+    endShape();
+
+    // Логіка часу графіка
+    time += 1; // Збільшуємо час
+    // Зупиняємо графік, коли він дійде до краю осі
+    if (graphX + time > width - 50) {
+        time = 0;
+        pathPoints = [];
+    }
+}
+</script>
+
+</body>
+</html>
