@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Симуляція: Деформація пружини (Аномалія)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+let springHeight = 100;
+let baseHeight = 100;
+let weightY = 0;
+let targetHeight = 250;
+let dragging = false;
+
+function setup() {
+  createCanvas(400, 500);
+}
+
+function draw() {
+  background(240);
+
+  // Стеля
+  fill(100);
+  noStroke();
+  rect(0, 0, width, 20);
+
+  // Координати кріплення
+  let startX = width / 2;
+  let startY = 20;
+
+  // Динаміка пружини (плавне розтягування)
+  springHeight = lerp(springHeight, targetHeight, 0.08);
+  weightY = startY + springHeight;
+
+  // --- Малювання пружини (зигзаг) ---
+  stroke(50);
+  strokeWeight(2);
+  noFill();
+  beginShape();
+  let steps = 25;
+  for (let i = 0; i <= steps; i++) {
+    let py = startY + (springHeight / steps) * i;
+    let px = startX + (i % 2 === 0 ? 15 : -15);
+    if (i === 0 || i === steps) px = startX;
+    vertex(px, py);
+  }
+  endShape();
+
+  // --- Малювання важка ---
+  fill(150, 75, 0); // Коричневий вантаж
+  stroke(50);
+  strokeWeight(2);
+  rectMode(CENTER);
+  rect(startX, weightY + 25, 60, 50, 5);
+  
+  fill(255);
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textSize(18);
+  text("m", startX, weightY + 25);
+
+  // --- ВЕКТОРИ СИЛ ---
+  
+  // 1. Сила тяжіння (Ft) - Правильна (спрямована вниз)
+  drawArrow(startX - 20, weightY + 25, 70, color(50), "Fт");
+
+  // 2. АНТИФІЗИЧНА ПОМИЛКА: Сила пружності (Fпр) спрямована ВНИЗ
+  // У реальності вона має бути спрямована вгору.
+  drawArrow(startX + 20, weightY + 25, 70, color(255, 0, 0), "Fпр");
+
+  // Текст-підказка та опис
+  push();
+  fill(0);
+  noStroke();
+  textSize(16);
+  textAlign(CENTER);
+  text("Дослідження деформації пружини", width / 2, height - 60);
+  textSize(12);
+  fill(100);
+  text("(Натисніть мишкою, щоб змінити навантаження)", width / 2, height - 40);
+  
+  fill(200, 0, 0);
+  text("АНОМАЛІЯ: Сила пружності спрямована вниз!", width / 2, height - 20);
+  pop();
+}
+
+// Функція для малювання стрілок
+function drawArrow(x, y, len, col, label) {
+  stroke(col);
+  strokeWeight(3);
+  line(x, y, x, y + len); // Основна лінія (завжди вниз за вашим кодом)
+  
+  // Наконечник стрілки
+  line(x, y + len, x - 5, y + len - 10);
+  line(x, y + len, x + 5, y + len - 10);
+  
+  // Підпис
+  fill(col);
+  noStroke();
+  textSize(14);
+  textAlign(LEFT);
+  text(label, x + 10, y + len);
+}
+
+// Інтерактивність
+function mousePressed() {
+  if (targetHeight < 200) {
+    targetHeight = 300; // Розтягнути
+  } else {
+    targetHeight = 120; // Стиснути
+  }
+}
+</script>
+
+</body>
+</html>
