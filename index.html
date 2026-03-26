@@ -23,6 +23,11 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         .card-glass:hover {
             transform: translateY(-5px);
@@ -66,97 +71,69 @@
     <main class="max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         <!-- Round 1 -->
-        <div class="card-glass p-6 rounded-lg cursor-pointer flex flex-col justify-between">
+        <a href="round1.html" class="card-glass p-6 rounded-lg">
             <div>
                 <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 01</span>
                 <h2 class="text-2xl font-bold mt-2 mb-4">Вступ. Моделі речовини</h2>
                 <p class="text-gray-400 text-sm">Аналіз мікросвіту. Досліджуємо молекулярні докази та будову всесвіту на рівні частинок.</p>
             </div>
-            <button class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-black transition-colors rounded">Розпочати слідство</button>
-        </div>
+            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Розпочати слідство</div>
+        </a>
 
         <!-- Round 2 -->
-        <div class="card-glass p-6 rounded-lg cursor-pointer flex flex-col justify-between">
+        <a href="round2.html" class="card-glass p-6 rounded-lg">
             <div>
                 <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 02</span>
                 <h2 class="text-2xl font-bold mt-2 mb-4">Рівномірний прямолінійний рух</h2>
                 <p class="text-gray-400 text-sm">Пошук підозрюваного за графіком швидкості. Розраховуємо час та шлях втечі об'єкта.</p>
             </div>
-            <button class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-black transition-colors rounded">Перевірити докази</button>
-        </div>
+            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Перевірити докази</div>
+        </a>
 
         <!-- Round 3 -->
-        <div class="card-glass p-6 rounded-lg cursor-pointer flex flex-col justify-between">
+        <a href="round3.html" class="card-glass p-6 rounded-lg">
             <div>
                 <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 03</span>
                 <h2 class="text-2xl font-bold mt-2 mb-4">Явище інерції</h2>
                 <p class="text-gray-400 text-sm">Чому тіла не хочуть зупинятися? Розслідування причин порушення спокою та наслідків інерції.</p>
             </div>
-            <button class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-black transition-colors rounded">Допитати свідків</button>
-        </div>
+            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Допитати свідків</div>
+        </a>
 
         <!-- Round 4 -->
-        <div class="card-glass p-6 rounded-lg cursor-pointer flex flex-col justify-between">
+        <a href="round4.html" class="card-glass p-6 rounded-lg">
             <div>
                 <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 04</span>
                 <h2 class="text-2xl font-bold mt-2 mb-4">Інертність та маса тіла</h2>
                 <p class="text-gray-400 text-sm">Встановлюємо масу "речових доказів". Чим більша інертність, тим складніше приховати сліди.</p>
             </div>
-            <button class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-black transition-colors rounded">Зібрати докази</button>
-        </div>
+            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Зібрати докази</div>
+        </a>
 
         <!-- Round 5 -->
-        <div class="card-glass p-6 rounded-lg cursor-pointer flex flex-col justify-between border-2 border-yellow-900/50">
+        <a href="round5.html" class="card-glass p-6 rounded-lg border-2 border-yellow-900/50">
             <div>
                 <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 05 (Гра)</span>
                 <h2 class="text-2xl font-bold mt-2 mb-4 text-yellow-400">Змагання Космонавтів у лабіринті</h2>
                 <p class="text-gray-400 text-sm">Інтерактивна місія: провести екіпаж крізь фізичні перешкоди та знайти вихід із лабіринту.</p>
             </div>
-            <button class="mt-6 py-2 px-4 bg-yellow-600 text-black font-bold hover:bg-yellow-500 transition-colors rounded">Запустити місію</button>
-        </div>
+            <div class="mt-6 py-2 px-4 bg-yellow-600 text-black font-bold text-center hover:bg-yellow-500 transition-colors rounded">Запустити місію</div>
+        </a>
 
         <!-- Round 6 -->
-        <div class="card-glass p-6 rounded-lg cursor-pointer flex flex-col justify-between">
+        <a href="round6.html" class="card-glass p-6 rounded-lg">
             <div>
                 <span class="text-yellow-600 font-bold detective-font text-lg">Епізод 06</span>
                 <h2 class="text-2xl font-bold mt-2 mb-4">Сили в природі</h2>
                 <p class="text-gray-400 text-sm">Фінальна очна ставка з силами тяжіння, пружності та тертя. Хто керує нашим світом?</p>
             </div>
-            <button class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 hover:bg-yellow-600 hover:text-black transition-colors rounded">Вердикт</button>
-        </div>
+            <div class="mt-6 py-2 px-4 border border-yellow-600 text-yellow-600 text-center hover:bg-yellow-600 hover:text-black transition-colors rounded">Вердикт</div>
+        </a>
 
         <!-- Captain's Challenge (Special) -->
         <div class="col-span-1 md:col-span-2 lg:col-span-3 mt-8">
-            <div class="bg-red-900/20 border-2 border-dashed border-red-500 rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-red-900/30 transition-all cursor-pointer">
+            <a href="captains.html" class="bg-red-900/20 border-2 border-dashed border-red-500 rounded-xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-red-900/30 transition-all text-decoration-none">
                 <div class="flex items-center gap-6">
                     <div class="bg-red-600 text-white p-4 rounded-full shadow-lg pulse-red">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-3xl font-bold text-red-400 detective-font uppercase">Дуель Шерлоків</h3>
-                        <p class="text-gray-300">Спеціальний конкурс для капітанів: логіка, інтуїція та знання законів Всесвіту.</p>
-                    </div>
-                </div>
-                <button class="bg-red-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-red-700 shadow-lg whitespace-nowrap">Викликати капітанів</button>
-            </div>
-        </div>
-    </main>
-
-    <!-- Footer Information -->
-    <footer class="mt-16 text-gray-500 text-sm text-center border-t border-gray-800 pt-8 w-full max-w-4xl">
-        <p>© 2024 Відділ фізичних розслідувань. Усі закони Ньютона дотримуються.</p>
-        <p class="mt-2">Підготуйте калькулятори та детективні капелюхи.</p>
-    </footer>
-
-    <script>
-        document.querySelectorAll('.card-glass, .bg-red-900\\/20').forEach(card => {
-            card.onclick = () => {
-                const title = card.querySelector('h2, h3').innerText;
-                console.log(`Завантаження епізоду: ${title}...`);
-            };
-        });
-    </script>
-</body>
-</html>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.
