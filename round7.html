@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Симуляція: Зіткнення куль (Аномалія)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #1a1a1a;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border: 5px solid #5d3a1a;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+<script>
+let ball1, ball2;
+let collisionHappened = false;
+let restartTimer = 0;
+
+function setup() {
+  createCanvas(600, 200);
+  initSimulation();
+}
+
+function initSimulation() {
+  // Початкові параметри куль
+  ball1 = { 
+    x: 50, 
+    v: 3, 
+    size: 40, 
+    color: color(255, 50, 50) // Червона куля 
+  };
+  ball2 = { 
+    x: 550, 
+    v: -3, 
+    size: 40, 
+    color: color(50, 50, 255) // Синя куля 
+  };
+  collisionHappened = false;
+  restartTimer = 0;
+}
+
+function draw() {
+  background(30, 100, 50); // Зелене сукно більярдного столу
+  
+  // Бортики столу
+  stroke(93, 58, 26);
+  strokeWeight(15);
+  noFill();
+  rect(0, 0, width, height);
+  
+  // Малюємо кулі
+  noStroke();
+  
+  // Куля 1
+  fill(ball1.color);
+  circle(ball1.x, height / 2, ball1.size);
+  fill(255, 150); // Відблиск
+  circle(ball1.x - 8, height / 2 - 8, 10);
+  
+  // Куля 2
+  fill(ball2.color);
+  circle(ball2.x, height / 2, ball2.size);
+  fill(255, 150); // Відблиск
+  circle(ball2.x - 8, height / 2 - 8, 10);
+
+  // Рух куль
+  ball1.x += ball1.v;
+  ball2.x += ball2.v;
+
+  // Перевірка зіткнення
+  let distance = abs(ball1.x - ball2.x);
+  if (distance < ball1.size && !collisionHappened) {
+    collisionHappened = true;
+    
+    // АНТИФІЗИЧНА ПОМИЛКА:
+    // Замість пружного відбиття (v1=-3, v2=3), 
+    // вони злипаються і прискорюються вправо (v=7)
+    ball1.v = 7;
+    ball2.v = 7;
+    // Штучне "злипання" позицій
+    ball1.x = ball2.x - ball1.size + 5; 
+  }
+
+  // Текстові підписи
+  push();
+  fill(255);
+  noStroke();
+  textAlign(CENTER);
+  textSize(18);
+  text("Абсолютно пружне зіткнення однакових куль", width / 2, 40);
+  
+  if (collisionHappened) {
+    fill(255, 255, 0);
+    textSize(14);
+    text("АНОМАЛІЯ: Порушення закону збереження імпульсу та енергії!", width / 2, height - 30);
+    restartTimer++;
+  } else {
+    fill(200);
+    textSize(12);
+    text("Кулі рухаються назустріч одна одній...", width / 2, height - 30);
+  }
+  pop();
+
+  // Автоматичний перезапуск через 3 секунди (60 fps * 3 = 180)
+  if (restartTimer > 180) {
+    initSimulation();
+  }
+}
+</script>
+
+</body>
+</html>
