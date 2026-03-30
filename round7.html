@@ -3,123 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Симуляція: Зіткнення куль (Аномалія)</title>
+    <title>Сонячна система: Аномальний Місяць</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
         body {
             margin: 0;
             padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #1a1a1a;
-            font-family: sans-serif;
+            background-color: #020205;
             overflow: hidden;
         }
         canvas {
-            border: 5px solid #5d3a1a;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: block;
         }
     </style>
 </head>
 <body>
 
 <script>
-let ball1, ball2;
-let collisionHappened = false;
-let restartTimer = 0;
+let angleEarth = 0;
+let angleMoon = 0;
+let stars = [];
 
 function setup() {
-  createCanvas(600, 200);
-  initSimulation();
+    createCanvas(windowWidth, windowHeight);
+    // Генерація статичного зоряного неба
+    for (let i = 0; i < 600; i++) {
+        stars.push({
+            x: random(width),
+            y: random(height),
+            size: random(0.5, 2.5),
+            bright: random(100, 255)
+        });
+    }
 }
 
-function initSimulation() {
-  // Початкові параметри куль
-  ball1 = { 
-    x: 50, 
-    v: 3, 
-    size: 40, 
-    color: color(255, 50, 50) // Червона куля 
-  };
-  ball2 = { 
-    x: 550, 
-    v: -3, 
-    size: 40, 
-    color: color(50, 50, 255) // Синя куля 
-  };
-  collisionHappened = false;
-  restartTimer = 0;
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
 }
 
 function draw() {
-  background(30, 100, 50); // Зелене сукно більярдного столу
-  
-  // Бортики столу
-  stroke(93, 58, 26);
-  strokeWeight(15);
-  noFill();
-  rect(0, 0, width, height);
-  
-  // Малюємо кулі
-  noStroke();
-  
-  // Куля 1
-  fill(ball1.color);
-  circle(ball1.x, height / 2, ball1.size);
-  fill(255, 150); // Відблиск
-  circle(ball1.x - 8, height / 2 - 8, 10);
-  
-  // Куля 2
-  fill(ball2.color);
-  circle(ball2.x, height / 2, ball2.size);
-  fill(255, 150); // Відблиск
-  circle(ball2.x - 8, height / 2 - 8, 10);
-
-  // Рух куль
-  ball1.x += ball1.v;
-  ball2.x += ball2.v;
-
-  // Перевірка зіткнення
-  let distance = abs(ball1.x - ball2.x);
-  if (distance < ball1.size && !collisionHappened) {
-    collisionHappened = true;
+    background(2, 2, 8);
     
-    // АНТИФІЗИЧНА ПОМИЛКА:
-    // Замість пружного відбиття (v1=-3, v2=3), 
-    // вони злипаються і прискорюються вправо (v=7)
-    ball1.v = 7;
-    ball2.v = 7;
-    // Штучне "злипання" позицій
-    ball1.x = ball2.x - ball1.size + 5; 
-  }
+    // Малюємо зорі на фоні
+    noStroke();
+    for (let s of stars) {
+        fill(255, s.bright);
+        ellipse(s.x, s.y, s.size);
+    }
 
-  // Текстові підписи
-  push();
-  fill(255);
-  noStroke();
-  textAlign(CENTER);
-  textSize(18);
-  text("Абсолютно пружне зіткнення однакових куль", width / 2, 40);
-  
-  if (collisionHappened) {
-    fill(255, 255, 0);
-    textSize(14);
-    text("АНОМАЛІЯ: Порушення закону збереження імпульсу та енергії!", width / 2, height - 30);
-    restartTimer++;
-  } else {
+    translate(width / 2, height / 2);
+
+    // 1. СОНЦЕ
+    drawSun();
+
+    // 2. ОРБІТА ЗЕМЛІ
+    // Радіус орбіти Землі адаптований до розміру екрана
+    let earthOrbitRel = min(width, height) * 0.35;
+    noFill();
+    stroke(255, 15);
+    ellipse(0, 0, earthOrbitRel * 2);
+
+    // Позиція Землі (рух проти годинникової стрілки)
+    let ex = cos(angleEarth) * earthOrbitRel;
+    let ey = sin(angleEarth) * earthOrbitRel;
+
+    push();
+    translate(ex, ey);
+    
+    // 3. ЗЕМЛЯ
+    drawEarth();
+
+    // 4. ОРБІТА МІСЯЦЯ
+    let moonOrbitRel = 75;
+    stroke(255, 25);
+    ellipse(0, 0, moonOrbitRel * 2);
+
+    // 5. МІСЯЦЬ (АНОМАЛІЯ: рух ЗА годинниковою стрілкою)
+    // Використовуємо angleMoon без мінуса, але змінюємо знак інкременту нижче
+    let mx = cos(angleMoon) * moonOrbitRel;
+    let my = sin(angleMoon) * moonOrbitRel;
+
+    translate(mx, my);
+    drawMoon();
+    pop();
+
+    // Оновлення швидкостей
+    // Земля: зменшуємо кут для руху ПРОТИ годинникової стрілки в системі p5.js
+    angleEarth -= 0.003; 
+    
+    // Місяць: збільшуємо кут для руху ЗА годинниковою стрілкою в системі p5.js
+    // (Оскільки вісь Y у браузері спрямована вниз, збільшення кута дає рух за годинниковою)
+    angleMoon += 0.02;   
+}
+
+function drawSun() {
+    push();
+    noStroke();
+    fill(255, 200, 0, 50);
+    ellipse(0, 0, 80);
+    fill(255, 230, 0);
+    ellipse(0, 0, 60);
+    pop();
+}
+
+function drawEarth() {
+    push();
+    noStroke();
+    // Океан
+    fill(0, 100, 255);
+    ellipse(0, 0, 35);
+    
+    // Схематичні материки
+    fill(50, 200, 50);
+    // Власне обертання Землі
+    rotate(-angleEarth * 5); 
+    ellipse(5, 0, 15, 10);
+    ellipse(-8, 5, 12, 18);
+    pop();
+}
+
+function drawMoon() {
+    push();
+    noStroke();
     fill(200);
-    textSize(12);
-    text("Кулі рухаються назустріч одна одній...", width / 2, height - 30);
-  }
-  pop();
-
-  // Автоматичний перезапуск через 3 секунди (60 fps * 3 = 180)
-  if (restartTimer > 180) {
-    initSimulation();
-  }
+    ellipse(0, 0, 12);
+    // Кратери
+    fill(150);
+    ellipse(-2, -2, 3, 3);
+    ellipse(2, 3, 2, 2);
+    pop();
 }
 </script>
 
