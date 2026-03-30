@@ -19,9 +19,7 @@
             overflow: hidden;
         }
         canvas {
-            border-radius: 8px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            cursor: pointer;
+            display: block;
         }
     </style>
 </head>
@@ -42,10 +40,14 @@ let osc;
 let soundEnabled = false;
 
 function setup() {
-    createCanvas(500, 600);
+    createCanvas(windowWidth, windowHeight);
     osc = new p5.Oscillator('sine');
     osc.amp(0);
     osc.start();
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
 }
 
 function draw() {
@@ -55,7 +57,7 @@ function draw() {
     let startY = springY;
 
     if (dragging) {
-        currentHeight = constrain(mouseY - startY, 40, 400);
+        currentHeight = constrain(mouseY - startY, 40, height - 150);
         velocity = 0;
     } else {
         let x = currentHeight - restLength;
@@ -72,8 +74,10 @@ function draw() {
         velocity *= damping; 
         currentHeight += velocity;
         
-        if (currentHeight > 380) {
-            currentHeight = 380;
+        // Обмеження, щоб кубик не падав за стіл
+        let tableLimit = height - 180;
+        if (currentHeight > tableLimit) {
+            currentHeight = tableLimit;
             velocity *= -0.1;
         }
         if (currentHeight < 40) {
@@ -99,7 +103,6 @@ function draw() {
     drawArrow(startX, weightCenterY, 60, color(46, 204, 113), "Fт");
     
     // Fпр (Червона) - ТЕПЕР ЗАВЖДИ ВНИЗ, навіть у рівновазі
-    // Базова довжина стрілки 40 + залежність від розтягування
     let fPrVisualLen = 40 + (deformation * 0.8); 
     
     // Малюємо силу пружності, що тисне вниз
@@ -110,20 +113,29 @@ function draw() {
 
 function drawEnvironment() {
     noStroke();
+    let tableY = height - 120;
+
+    // Стіна
     for (let i = 0; i < height; i++) {
         let inter = map(i, 0, height, 0, 1);
         let c = lerpColor(color(189, 195, 199), color(149, 165, 166), inter);
         stroke(c);
         line(0, i, width, i);
     }
+    
+    // Лінія стику столу
     stroke(127, 140, 141);
     strokeWeight(1);
-    line(0, 480, width, 480);
+    line(0, tableY, width, tableY);
+
+    // Поверхня столу
     noStroke();
     fill(100, 70, 45); 
-    rect(0, 480, width, height - 480);
+    rect(0, tableY, width, height - tableY);
+    
+    // Текстура дерева
     stroke(80, 50, 30);
-    for(let j = 490; j < height; j += 15) {
+    for(let j = tableY + 10; j < height; j += 15) {
         line(0, j, width, j + random(-2, 2));
     }
 }
@@ -141,10 +153,10 @@ function drawStand(x, y) {
 
 function drawShadow(x, weightY) {
     push();
-    let tableSurfaceY = 480;
+    let tableSurfaceY = height - 120;
     let distToTable = tableSurfaceY - (weightY + 60);
-    let opacity = map(distToTable, 0, 400, 100, 0);
-    let sizeScale = map(distToTable, 0, 400, 1.1, 0.5);
+    let opacity = map(distToTable, 0, height, 100, 0);
+    let sizeScale = map(distToTable, 0, height, 1.1, 0.2);
     if (opacity > 0) {
         noStroke();
         fill(0, opacity);
@@ -217,7 +229,7 @@ function updateSound(h, v) {
         osc.amp(0, 0.1);
         return;
     }
-    let freq = map(h, 40, 400, 500, 200);
+    let freq = map(h, 40, height, 500, 100);
     osc.freq(freq, 0.05);
     let volume = map(abs(v), 0, 10, 0, 0.4);
     osc.amp(volume, 0.05);
