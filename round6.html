@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Симуляція: Деформація пружини (Аномалія)</title>
+    <title>Симуляція: Аномальна Пружність</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -13,123 +14,260 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f0f0f0;
-            font-family: sans-serif;
+            background-color: #1a1a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
         }
         canvas {
-            border: 1px solid #ccc;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
 <script>
-let springHeight = 100;
-let baseHeight = 100;
-let weightY = 0;
-let targetHeight = 250;
+let springY = 40; 
+let restLength = 160; // Умовне положення рівноваги
+let currentHeight = 160; 
+let velocity = 0;     
+let mass = 2.0;       
+let k = 0.12;         // Жорсткість
+let damping = 0.88;   
+let gravity = 0.4;    
+
 let dragging = false;
+let osc;
+let soundEnabled = false;
 
 function setup() {
-  createCanvas(400, 500);
+    createCanvas(500, 600);
+    osc = new p5.Oscillator('sine');
+    osc.amp(0);
+    osc.start();
 }
 
 function draw() {
-  background(240);
+    drawEnvironment();
 
-  // Стеля
-  fill(100);
-  noStroke();
-  rect(0, 0, width, 20);
+    let startX = width / 2;
+    let startY = springY;
 
-  // Координати кріплення
-  let startX = width / 2;
-  let startY = 20;
+    if (dragging) {
+        currentHeight = constrain(mouseY - startY, 40, 400);
+        velocity = 0;
+    } else {
+        let x = currentHeight - restLength;
+        
+        // Сила пружності (аномальна)
+        let fSpring = k * x; 
+        let fGravity = gravity * mass;
+        
+        // Сумарна сила з урахуванням антигравітаційного утримання
+        let totalForce = (fSpring + fGravity) * -1; 
+        
+        let acceleration = totalForce / mass;
+        velocity += acceleration;
+        velocity *= damping; 
+        currentHeight += velocity;
+        
+        if (currentHeight > 380) {
+            currentHeight = 380;
+            velocity *= -0.1;
+        }
+        if (currentHeight < 40) {
+            currentHeight = 40;
+            velocity = 0;
+        }
+    }
+    
+    updateSound(currentHeight, velocity);
 
-  // Динаміка пружини (плавне розтягування)
-  springHeight = lerp(springHeight, targetHeight, 0.08);
-  weightY = startY + springHeight;
+    let weightTopY = startY + currentHeight; 
+    let weightCenterY = weightTopY + 30;    
 
-  // --- Малювання пружини (зигзаг) ---
-  stroke(50);
-  strokeWeight(2);
-  noFill();
-  beginShape();
-  let steps = 25;
-  for (let i = 0; i <= steps; i++) {
-    let py = startY + (springHeight / steps) * i;
-    let px = startX + (i % 2 === 0 ? 15 : -15);
-    if (i === 0 || i === steps) px = startX;
-    vertex(px, py);
-  }
-  endShape();
+    drawShadow(startX, weightTopY);
+    drawStand(startX, startY);
+    drawSpring(startX, startY, currentHeight);
+    drawWeight(startX, weightTopY);
 
-  // --- Малювання важка ---
-  fill(150, 75, 0); // Коричневий вантаж
-  stroke(50);
-  strokeWeight(2);
-  rectMode(CENTER);
-  rect(startX, weightY + 25, 60, 50, 5);
-  
-  fill(255);
-  noStroke();
-  textAlign(CENTER, CENTER);
-  textSize(18);
-  text("m", startX, weightY + 25);
+    // Візуалізація векторів
+    let deformation = currentHeight - restLength;
+    
+    // Fт (Зелена) - гравітація вниз
+    drawArrow(startX, weightCenterY, 60, color(46, 204, 113), "Fт");
+    
+    // Fпр (Червона) - ТЕПЕР ЗАВЖДИ ВНИЗ, навіть у рівновазі
+    // Базова довжина стрілки 40 + залежність від розтягування
+    let fPrVisualLen = 40 + (deformation * 0.8); 
+    
+    // Малюємо силу пружності, що тисне вниз
+    drawArrow(startX, weightTopY, max(20, fPrVisualLen), color(231, 76, 60), "Fпр");
 
-  // --- ВЕКТОРИ СИЛ ---
-  
-  // 1. Сила тяжіння (Ft) - Правильна (спрямована вниз)
-  drawArrow(startX - 20, weightY + 25, 70, color(50), "Fт");
-
-  // 2. АНТИФІЗИЧНА ПОМИЛКА: Сила пружності (Fпр) спрямована ВНИЗ
-  // У реальності вона має бути спрямована вгору.
-  drawArrow(startX + 20, weightY + 25, 70, color(255, 0, 0), "Fпр");
-
-  // Текст-підказка та опис
-  push();
-  fill(0);
-  noStroke();
-  textSize(16);
-  textAlign(CENTER);
-  text("Дослідження деформації пружини", width / 2, height - 60);
-  textSize(12);
-  fill(100);
-  text("(Натисніть мишкою, щоб змінити навантаження)", width / 2, height - 40);
-  
-  fill(200, 0, 0);
-  text("АНОМАЛІЯ: Сила пружності спрямована вниз!", width / 2, height - 20);
-  pop();
+    drawSoundButton();
 }
 
-// Функція для малювання стрілок
+function drawEnvironment() {
+    noStroke();
+    for (let i = 0; i < height; i++) {
+        let inter = map(i, 0, height, 0, 1);
+        let c = lerpColor(color(189, 195, 199), color(149, 165, 166), inter);
+        stroke(c);
+        line(0, i, width, i);
+    }
+    stroke(127, 140, 141);
+    strokeWeight(1);
+    line(0, 480, width, 480);
+    noStroke();
+    fill(100, 70, 45); 
+    rect(0, 480, width, height - 480);
+    stroke(80, 50, 30);
+    for(let j = 490; j < height; j += 15) {
+        line(0, j, width, j + random(-2, 2));
+    }
+}
+
+function drawStand(x, y) {
+    push();
+    fill(60);
+    rectMode(CENTER);
+    noStroke();
+    rect(x, y - 10, 80, 20, 3); 
+    fill(40);
+    ellipse(x, y - 5, 15, 15); 
+    pop();
+}
+
+function drawShadow(x, weightY) {
+    push();
+    let tableSurfaceY = 480;
+    let distToTable = tableSurfaceY - (weightY + 60);
+    let opacity = map(distToTable, 0, 400, 100, 0);
+    let sizeScale = map(distToTable, 0, 400, 1.1, 0.5);
+    if (opacity > 0) {
+        noStroke();
+        fill(0, opacity);
+        ellipse(x, tableSurfaceY + 5, 80 * sizeScale, 20 * sizeScale);
+    }
+    pop();
+}
+
+function drawSpring(x, y, h) {
+    push();
+    stroke(70);
+    strokeWeight(3);
+    noFill();
+    let segments = 25;
+    let r = 16;
+    beginShape();
+    vertex(x, y);
+    for (let i = 0; i <= segments; i++) {
+        let py = y + (i * h / segments);
+        let px = x + (i % 2 === 0 ? r : -r);
+        if (i > 0 && i < segments) {
+            curveVertex(px, py);
+        } else {
+            vertex(x, py);
+        }
+    }
+    vertex(x, y + h);
+    endShape();
+    pop();
+}
+
+function drawWeight(x, y) {
+    push();
+    noStroke();
+    fill(0, 40); 
+    rect(x - 32, y + 3, 70, 60, 4);
+    stroke(44, 62, 80);
+    strokeWeight(2);
+    fill(52, 152, 219); 
+    rect(x - 35, y, 70, 60, 4); 
+    fill(255, 80);
+    noStroke();
+    rect(x - 30, y + 5, 60, 8, 2);
+    fill(44, 62, 80);
+    ellipse(x, y + 30, 8, 8);
+    pop();
+}
+
 function drawArrow(x, y, len, col, label) {
-  stroke(col);
-  strokeWeight(3);
-  line(x, y, x, y + len); // Основна лінія (завжди вниз за вашим кодом)
-  
-  // Наконечник стрілки
-  line(x, y + len, x - 5, y + len - 10);
-  line(x, y + len, x + 5, y + len - 10);
-  
-  // Підпис
-  fill(col);
-  noStroke();
-  textSize(14);
-  textAlign(LEFT);
-  text(label, x + 10, y + len);
+    push();
+    stroke(col);
+    strokeWeight(5);
+    line(x, y, x, y + len);
+    let arrowSize = 10;
+    let arrowDir = len > 0 ? 1 : -1;
+    line(x, y + len, x - arrowSize, y + len - (arrowSize * arrowDir));
+    line(x, y + len, x + arrowSize, y + len - (arrowSize * arrowDir));
+    fill(col);
+    noStroke();
+    textSize(18);
+    textStyle(BOLD);
+    textAlign(len > 0 ? LEFT : RIGHT, CENTER);
+    text(label, x + (len > 0 ? 20 : -20), y + len);
+    ellipse(x, y, 8, 8);
+    pop();
 }
 
-// Інтерактивність
+function updateSound(h, v) {
+    if (!soundEnabled) {
+        osc.amp(0, 0.1);
+        return;
+    }
+    let freq = map(h, 40, 400, 500, 200);
+    osc.freq(freq, 0.05);
+    let volume = map(abs(v), 0, 10, 0, 0.4);
+    osc.amp(volume, 0.05);
+}
+
+function drawSoundButton() {
+    push();
+    let btnX = width - 50;
+    let btnY = 50;
+    stroke(52, 73, 94);
+    strokeWeight(2);
+    fill(soundEnabled ? color(52, 152, 219) : color(220));
+    ellipse(btnX, btnY, 44, 44);
+    fill(255);
+    noStroke();
+    rectMode(CENTER);
+    rect(btnX - 4, btnY, 7, 7);
+    beginShape();
+    vertex(btnX - 2, btnY - 4);
+    vertex(btnX + 5, btnY - 10);
+    vertex(btnX + 5, btnY + 10);
+    vertex(btnX - 2, btnY + 4);
+    endShape(CLOSE);
+    pop();
+}
+
+async function toggleSound() {
+    if (getAudioContext().state !== 'running') {
+        await userStartAudio();
+    }
+    soundEnabled = !soundEnabled;
+}
+
 function mousePressed() {
-  if (targetHeight < 200) {
-    targetHeight = 300; // Розтягнути
-  } else {
-    targetHeight = 120; // Стиснути
-  }
+    let d = dist(mouseX, mouseY, width - 50, 50);
+    if (d < 22) {
+        toggleSound();
+        return;
+    }
+    let startX = width / 2;
+    let weightTopY = springY + currentHeight;
+    if (mouseX > startX - 45 && mouseX < startX + 45 && 
+        mouseY > weightTopY - 10 && mouseY < weightTopY + 70) {
+        dragging = true;
+        if (getAudioContext().state !== 'running') userStartAudio();
+    }
+}
+
+function mouseReleased() {
+    dragging = false;
 }
 </script>
 
