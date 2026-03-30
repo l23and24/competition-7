@@ -11,6 +11,8 @@
             padding: 0;
             background-color: #020205;
             overflow: hidden;
+            width: 100vw;
+            height: 100vh;
         }
         canvas {
             display: block;
@@ -25,7 +27,9 @@ let angleMoon = 0;
 let stars = [];
 
 function setup() {
+    // Створюємо полотно на весь доступний простір вікна
     createCanvas(windowWidth, windowHeight);
+    
     // Генерація статичного зоряного неба
     for (let i = 0; i < 600; i++) {
         stars.push({
@@ -38,7 +42,19 @@ function setup() {
 }
 
 function windowResized() {
+    // Оновлення розміру полотна при зміні розміру вікна браузера
     resizeCanvas(windowWidth, windowHeight);
+    
+    // Перегенеруємо зірки, щоб вони заповнювали новий простір
+    stars = [];
+    for (let i = 0; i < 600; i++) {
+        stars.push({
+            x: random(width),
+            y: random(height),
+            size: random(0.5, 2.5),
+            bright: random(100, 255)
+        });
+    }
 }
 
 function draw() {
@@ -46,7 +62,8 @@ function draw() {
     
     // Малюємо зорі на фоні
     noStroke();
-    for (let s of stars) {
+    for (let i = 0; i < stars.length; i++) {
+        let s = stars[i];
         fill(255, s.bright);
         ellipse(s.x, s.y, s.size);
     }
@@ -57,7 +74,6 @@ function draw() {
     drawSun();
 
     // 2. ОРБІТА ЗЕМЛІ
-    // Радіус орбіти Землі адаптований до розміру екрана
     let earthOrbitRel = min(width, height) * 0.35;
     noFill();
     stroke(255, 15);
@@ -79,7 +95,6 @@ function draw() {
     ellipse(0, 0, moonOrbitRel * 2);
 
     // 5. МІСЯЦЬ (АНОМАЛІЯ: рух ЗА годинниковою стрілкою)
-    // Використовуємо angleMoon без мінуса, але змінюємо знак інкременту нижче
     let mx = cos(angleMoon) * moonOrbitRel;
     let my = sin(angleMoon) * moonOrbitRel;
 
@@ -88,11 +103,10 @@ function draw() {
     pop();
 
     // Оновлення швидкостей
-    // Земля: зменшуємо кут для руху ПРОТИ годинникової стрілки в системі p5.js
+    // Земля: зменшуємо кут для руху ПРОТИ годинникової стрілки
     angleEarth -= 0.003; 
     
-    // Місяць: збільшуємо кут для руху ЗА годинниковою стрілкою в системі p5.js
-    // (Оскільки вісь Y у браузері спрямована вниз, збільшення кута дає рух за годинниковою)
+    // Місяць: збільшуємо кут для руху ЗА годинниковою стрілкою
     angleMoon += 0.02;   
 }
 
