@@ -87,7 +87,7 @@
     <div class="player-stats border-cyan-500/50">
         <div class="text-cyan-400 font-bold text-[10px]">P1: СТРІЛКИ</div>
         <div class="flex justify-between text-[10px] opacity-70">
-            <span>FUEL</span>
+            <span>ПАЛИВО</span>
             <span id="p1FuelText">100%</span>
         </div>
         <div class="fuel-bar-container">
@@ -98,7 +98,7 @@
     <div class="player-stats border-green-500/50">
         <div class="text-green-400 font-bold text-[10px] text-right">P2: WASD</div>
         <div class="flex justify-between text-[10px] opacity-70">
-            <span>FUEL</span>
+            <span>ПАЛИВО</span>
             <span id="p2FuelText">100%</span>
         </div>
         <div class="fuel-bar-container">
@@ -113,7 +113,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Audio Context
+    // Аудіо
     let audioCtx = null;
     function initAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -124,13 +124,13 @@
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
         oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime((40 + Math.random() * 20) * freqMod, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        oscillator.frequency.setValueAtTime((35 + Math.random() * 15) * freqMod, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.03, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
         oscillator.connect(gainNode);
         gainNode.connect(audioCtx.destination);
         oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
+        oscillator.stop(audioCtx.currentTime + 0.08);
     }
 
     function playBounceSound() {
@@ -138,22 +138,21 @@
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
         oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.2);
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+        oscillator.frequency.setValueAtTime(120, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
+        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
         oscillator.connect(gainNode);
         gainNode.connect(audioCtx.destination);
         oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.2);
+        oscillator.stop(audioCtx.currentTime + 0.15);
     }
 
     const TILE_SIZE = 80;
-    const THRUST = 0.18;
-    const DAMPING = 0.975; 
-    const BOUNCE_FACTOR = -0.85; 
+    const THRUST = 0.22;
+    const DAMPING = 0.96; 
+    const BOUNCE_FACTOR = -0.5; // Зменшено для запобігання "стрибкам" всередині стін
 
-    // Лабіринт 15x9
     const maze = [
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
@@ -176,43 +175,63 @@
     function createPlayer(id, x, y, color, controls) {
         return {
             id, x, y, color, controls,
-            vx: 0, vy: 0, radius: 18, fuel: 100, angle: 0,
+            vx: 0, vy: 0, radius: 14, fuel: 100, angle: 0,
             isThrusting: false
         };
     }
 
     let p1 = createPlayer(1, (COLS - 1.5) * TILE_SIZE, 1.5 * TILE_SIZE, '#22d3ee', {
-        up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right: 'arrowright'
+        up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight'
     });
     let p2 = createPlayer(2, (COLS - 1.5) * TILE_SIZE, 7.5 * TILE_SIZE, '#4ade80', {
-        up: 'w', down: 's', left: 'a', right: 'd'
+        up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD'
     });
 
     const players = [p1, p2];
-    const keys = {};
+    const keyMap = {};
 
-    window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; initAudio(); });
-    window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+    window.addEventListener('keydown', e => { 
+        keyMap[e.code] = true;
+        keyMap[e.key] = true;
+        initAudio(); 
+    });
+    window.addEventListener('keyup', e => { 
+        keyMap[e.code] = false;
+        keyMap[e.key] = false; 
+    });
 
-    function getCell(x, y) {
+    function isWall(x, y) {
         const gx = Math.floor(x / TILE_SIZE);
         const gy = Math.floor(y / TILE_SIZE);
-        if (gy >= 0 && gy < ROWS && gx >= 0 && gx < COLS) return maze[gy][gx];
-        return 1;
+        if (gy >= 0 && gy < ROWS && gx >= 0 && gx < COLS) {
+            return maze[gy][gx] === 1;
+        }
+        return true;
+    }
+
+    function checkCollision(x, y, radius) {
+        // Перевіряємо 4 кути навколо гравця
+        const offset = radius * 0.8;
+        return (
+            isWall(x - offset, y - offset) ||
+            isWall(x + offset, y - offset) ||
+            isWall(x - offset, y + offset) ||
+            isWall(x + offset, y + offset)
+        );
     }
 
     function updatePlayer(p) {
         if (!gameActive) return;
         p.isThrusting = false;
+        
         if (p.fuel > 0) {
-            if (keys[p.controls.up]) { p.vy -= THRUST; p.isThrusting = true; }
-            if (keys[p.controls.down]) { p.vy += THRUST; p.isThrusting = true; }
-            if (keys[p.controls.left]) { p.vx -= THRUST; p.isThrusting = true; }
-            if (keys[p.controls.right]) { p.vx += THRUST; p.isThrusting = true; }
+            if (keyMap[p.controls.up]) { p.vy -= THRUST; p.isThrusting = true; }
+            if (keyMap[p.controls.down]) { p.vy += THRUST; p.isThrusting = true; }
+            if (keyMap[p.controls.left]) { p.vx -= THRUST; p.isThrusting = true; }
+            if (keyMap[p.controls.right]) { p.vx += THRUST; p.isThrusting = true; }
             
             if(p.isThrusting) {
-                p.fuel -= 0.15;
-                p.angle = Math.atan2(p.vy, p.vx);
+                p.fuel -= 0.12;
                 playRocketSound();
             }
         }
@@ -220,21 +239,34 @@
         p.vx *= DAMPING;
         p.vy *= DAMPING;
 
-        const pad = p.radius * 0.75;
-        
+        // Окремий рух по X для ковзання вздовж стін
         let nextX = p.x + p.vx;
-        if (getCell(nextX - pad, p.y) === 1 || getCell(nextX + pad, p.y) === 1) {
+        if (!checkCollision(nextX, p.y, p.radius)) {
+            p.x = nextX;
+        } else {
+            if (Math.abs(p.vx) > 0.5) playBounceSound();
             p.vx *= BOUNCE_FACTOR;
-            playBounceSound();
-        } else { p.x = nextX; }
+        }
 
+        // Окремий рух по Y
         let nextY = p.y + p.vy;
-        if (getCell(p.x, nextY - pad) === 1 || getCell(p.x, nextY + pad) === 1) {
+        if (!checkCollision(p.x, nextY, p.radius)) {
+            p.y = nextY;
+        } else {
+            if (Math.abs(p.vy) > 0.5) playBounceSound();
             p.vy *= BOUNCE_FACTOR;
-            playBounceSound();
-        } else { p.y = nextY; }
+        }
 
-        if (getCell(p.x, p.y) === 3) endGame(p.id);
+        // Плавний розворот
+        if (Math.abs(p.vx) > 0.1 || Math.abs(p.vy) > 0.1) {
+            let targetAngle = Math.atan2(p.vy, p.vx);
+            p.angle = targetAngle;
+        }
+
+        // Вихід
+        const gx = Math.floor(p.x / TILE_SIZE);
+        const gy = Math.floor(p.y / TILE_SIZE);
+        if (maze[gy] && maze[gy][gx] === 3) endGame(p.id);
     }
 
     function endGame(id) {
@@ -255,116 +287,60 @@
         const time = Date.now() / 1000;
         
         ctx.save();
-        
-        // 1. Зовнішнє підсвічування шлюзу (м'яке світіння)
-        const glow = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, 45);
-        glow.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
-        glow.addColorStop(1, 'transparent');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 2. Металевий корпус шлюзу (кільце)
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Внутрішня тінь корпусу
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 27, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // 3. Світлова індикація (зелені вогні по периметру)
-        const numLights = 8;
-        for (let i = 0; i < numLights; i++) {
-            const angle = (i / numLights) * Math.PI * 2 + time;
-            const lx = centerX + Math.cos(angle) * 30;
-            const ly = centerY + Math.sin(angle) * 30;
-            
-            ctx.fillStyle = '#4ade80';
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = '#4ade80';
-            ctx.beginPath();
-            ctx.arc(lx, ly, 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-
-        // 4. Внутрішня частина шлюзу (ефект глибини/телепорту)
-        const innerRadius = 24 + Math.sin(time * 4) * 2;
-        const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, innerRadius);
-        grad.addColorStop(0, '#0ea5e9'); // Яскраве ядро
-        grad.addColorStop(0.6, '#0369a1'); // Темно-синій
-        grad.addColorStop(1, '#0c0a09'); // Глибока темрява
-        
+        // Внутрішнє світло
+        const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 35);
+        grad.addColorStop(0, '#0ea5e9'); grad.addColorStop(0.7, '#0369a1'); grad.addColorStop(1, '#0c0a09'); 
         ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 24, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(centerX, centerY, 28, 0, Math.PI * 2); ctx.fill();
 
-        // 5. Деталі - перехрестя (як у затвора камери або стикувального вузла)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(centerX - 24, centerY);
-        ctx.lineTo(centerX + 24, centerY);
-        ctx.moveTo(centerX, centerY - 24);
-        ctx.lineTo(centerX, centerY + 24);
-        ctx.stroke();
+        // Металевий шлюз
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(centerX, centerY, 30, 0, Math.PI * 2); ctx.stroke();
 
+        // Вогні
+        const numLights = 6;
+        for (let i = 0; i < numLights; i++) {
+            const angle = (i / numLights) * Math.PI * 2 + time * 2;
+            ctx.fillStyle = '#4ade80';
+            ctx.beginPath();
+            ctx.arc(centerX + Math.cos(angle) * 30, centerY + Math.sin(angle) * 30, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 
     function drawAstronaut(p) {
         ctx.save();
         ctx.translate(p.x, p.y);
-        
-        if (Math.abs(p.vx) > 0.1 || Math.abs(p.vy) > 0.1) p.angle = Math.atan2(p.vy, p.vx);
         ctx.rotate(p.angle);
 
-        // Jetpack
-        ctx.fillStyle = '#475569';
-        ctx.roundRect(-15, -11, 10, 22, 2);
-        ctx.fill();
+        // Ранець
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(-14, -10, 8, 20);
         
         if (p.isThrusting) {
-            const flameSize = 10 + Math.random() * 15;
-            const grad = ctx.createRadialGradient(-16, 0, 2, -25, 0, flameSize);
-            grad.addColorStop(0, '#fde047');
-            grad.addColorStop(0.4, '#f97316');
-            grad.addColorStop(1, 'transparent');
-            ctx.fillStyle = grad;
-            ctx.beginPath(); ctx.arc(-20, 0, flameSize, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fb923c';
+            ctx.beginPath(); ctx.arc(-18, 0, 5 + Math.random() * 5, 0, Math.PI*2); ctx.fill();
         }
 
-        // Suit
-        ctx.fillStyle = '#f8fafc';
-        ctx.beginPath(); ctx.roundRect(-8, -12, 20, 24, 8); ctx.fill();
+        // Костюм
+        ctx.fillStyle = '#f1f5f9';
+        ctx.beginPath(); ctx.roundRect(-8, -12, 18, 24, 6); ctx.fill();
         
-        // Helmet
+        // Шолом
         ctx.fillStyle = p.color;
         ctx.beginPath(); ctx.arc(6, 0, 10, 0, Math.PI*2); ctx.fill();
 
-        // Visor
-        const visorGrad = ctx.createLinearGradient(6, -6, 14, 6);
-        visorGrad.addColorStop(0, '#0f172a'); visorGrad.addColorStop(1, '#334155');
-        ctx.fillStyle = visorGrad;
-        ctx.beginPath(); ctx.ellipse(10, 0, 6, 8, 0, 0, Math.PI*2); ctx.fill();
+        // Скло
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath(); ctx.ellipse(9, 0, 5, 7, 0, 0, Math.PI*2); ctx.fill();
         
-        ctx.fillStyle = 'white'; ctx.globalAlpha = 0.3;
-        ctx.beginPath(); ctx.arc(11, -3, 2, 0, Math.PI*2); ctx.fill();
-        ctx.globalAlpha = 1;
         ctx.restore();
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
                 const x = c * TILE_SIZE;
@@ -373,8 +349,7 @@
                     ctx.fillStyle = '#0f172a';
                     ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
                     ctx.strokeStyle = '#1e293b';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.strokeRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
                 } else if (maze[r][c] === 3) {
                     drawExit(x, y);
                 }
@@ -393,12 +368,8 @@
         requestAnimationFrame(gameLoop);
     }
 
-    function resize() {
-        canvas.width = WORLD_WIDTH;
-        canvas.height = WORLD_HEIGHT;
-    }
-
-    resize();
+    canvas.width = WORLD_WIDTH;
+    canvas.height = WORLD_HEIGHT;
     gameLoop();
 </script>
 </body>
