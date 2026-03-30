@@ -3,156 +3,337 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Симуляція: Аномальний графік</title>
+    <title>Симуляція: Аномальний графік руху</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
         body {
             margin: 0;
             padding: 0;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f5f5f5;
-            font-family: sans-serif;
+            background-color: #f0f4f8;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
         }
-        canvas {
-            border: 2px solid #ddd;
-            border-radius: 4px;
+        #controls {
+            position: absolute;
+            bottom: 5%;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+            z-index: 10;
+        }
+        .slider-label {
+            font-size: 18px; /* Більший шрифт для дошки */
+            font-weight: 600;
+            color: #445566;
+            min-width: 200px;
+        }
+        input[type="range"] {
+            width: 250px; /* Ширший повзунок */
+            height: 10px;
+            cursor: pointer;
+        }
+        #sound-btn {
+            background: #455a64;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #sound-btn:active {
+            transform: scale(0.95);
+        }
+        #sound-btn.active {
+            background: #ef5350;
         }
     </style>
 </head>
 <body>
 
-<script>
-// Змінні для руху автомобіля
-let carX = 50; // Початкова позиція автомобіля
-let carY = 320; // Позиція автомобіля по вертикалі
-let carSpeed = 2; // Швидкість автомобіля для анімації (не км/год)
-let carWidth = 80;
-let carHeight = 40;
+<div id="controls">
+    <button id="sound-btn">
+        <span id="sound-icon">🔈</span> Увімкнути звук
+    </button>
+    <div class="slider-label">Швидкість: <span id="speedVal">60</span> км/год</div>
+    <input type="range" id="speedSlider" min="0" max="180" value="60">
+</div>
 
-// Змінні для графіка
-let graphX = 100; // Початкова точка графіка по горизонталі
-let graphY = 150; // Точка осі часу (t)
-let graphHeight = 100; // Максимальна висота осі шляху (l)
-let time = 0; // Час для графіка
-let pathPoints = []; // Масив точок для малювання графіка
+<script>
+let carX = 0;
+let carY;
+let carWidth = 110;
+let carHeight = 35;
+let speedKmH = 60;
+let time = 0;
+let pathPoints = [];
+let speedSlider, speedValDisplay;
+
+// Аудіо змінні
+let audioCtx, oscillator, gainNode;
+let isAudioStarted = false;
+
+// Параметри графіка (динамічні)
+let graphX, graphY, graphW, graphH;
 
 function setup() {
-    createCanvas(600, 400);
+    createCanvas(windowWidth, windowHeight);
+    updateLayout();
+    
+    speedSlider = document.getElementById('speedSlider');
+    speedValDisplay = document.getElementById('speedVal');
+    const soundBtn = document.getElementById('sound-btn');
+    
+    carX = -carWidth;
+
+    speedSlider.addEventListener('input', () => {
+        pathPoints = [];
+        time = 0;
+        updateEngineSound();
+    });
+
+    soundBtn.addEventListener('click', toggleSound);
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    updateLayout();
+    pathPoints = []; // Скидаємо графік при зміні розміру для уникнення помилок масштабу
+    time = 0;
+}
+
+function updateLayout() {
+    // Адаптація координат під розмір екрана
+    graphX = width * 0.1;
+    graphY = height * 0.55;
+    graphW = width * 0.75;
+    graphH = height * 0.35;
+    carY = height * 0.75;
+}
+
+function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    oscillator = audioCtx.createOscillator();
+    gainNode = audioCtx.createGain();
+    oscillator.type = 'sawtooth'; 
+    oscillator.frequency.setValueAtTime(50, audioCtx.currentTime); 
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime); 
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.start();
+    isAudioStarted = true;
+}
+
+function toggleSound() {
+    const btn = document.getElementById('sound-btn');
+    if (!audioCtx) initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    if (btn.classList.contains('active')) {
+        gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+        btn.classList.remove('active');
+        btn.innerHTML = '<span id="sound-icon">🔈</span> Увімкнути звук';
+    } else {
+        gainNode.gain.setTargetAtTime(0.1, audioCtx.currentTime, 0.1);
+        btn.classList.add('active');
+        btn.innerHTML = '<span id="sound-icon">🔊</span> Вимкнути звук';
+        updateEngineSound();
+    }
+}
+
+function updateEngineSound() {
+    if (isAudioStarted && audioCtx.state === 'running') {
+        let freq = map(speedKmH, 0, 180, 40, 150);
+        oscillator.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.1);
+        let vol = map(speedKmH, 0, 180, 0.05, 0.2);
+        if (document.getElementById('sound-btn').classList.contains('active')) {
+            gainNode.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.1);
+        }
+    }
 }
 
 function draw() {
-    background(240); // Світлий фон
-
-    // --- Заголовок та інтерфейс ---
-    fill(0);
-    noStroke();
-    textAlign(CENTER);
-    textSize(18);
-    text("Симуляція: Рівномірний прямолінійний рух", width / 2, 30);
+    background(230, 235, 240); 
     
-    // Спідометр
-    push();
-    fill(255);
-    stroke(0);
-    strokeWeight(2);
-    rect(width - 150, 60, 130, 60, 10);
-    fill(0);
-    noStroke();
-    textAlign(CENTER);
-    textSize(16);
-    text("СПІДОМЕТР", width - 85, 80);
-    textSize(20);
-    textStyle(BOLD);
-    text("60 км/год", width - 85, 105);
-    textStyle(NORMAL);
-    pop();
-
-    // --- Малювання дороги та автомобіля ---
-    // Дорога
-    fill(100);
-    noStroke();
-    rect(0, carY + carHeight, width, 20);
-    // Розмітка
-    fill(255);
-    for (let i = 0; i < width; i += 40) {
-        rect(i + 10, carY + carHeight + 8, 20, 4);
-    }
-
-    // Автомобіль (спрощений)
-    push();
-    fill(255, 50, 50); // Червоний колір
-    stroke(0);
-    strokeWeight(2);
-    // Кузов
-    rect(carX, carY, carWidth, carHeight, 5);
-    // Дах
-    rect(carX + 15, carY - 20, carWidth - 30, 20, 5);
-    // Колеса
-    fill(0);
-    ellipse(carX + 20, carY + carHeight, 20, 20);
-    ellipse(carX + carWidth - 20, carY + carHeight, 20, 20);
-    pop();
-
-    // Логіка руху автомобіля
-    carX += carSpeed;
-    // Якщо автомобіль доїхав до краю, повертаємо його назад
+    speedKmH = parseInt(speedSlider.value);
+    speedValDisplay.innerText = speedKmH;
+    
+    let moveStep = (speedKmH / 25) * (width / 800); // Корекція швидкості під ширину екрана
+    carX += moveStep;
+    
     if (carX > width) {
         carX = -carWidth;
-    }
-
-    // --- Малювання графіка l(t) ---
-    // Осі графіка
-    stroke(0);
-    strokeWeight(2);
-    // Вісь l (шлях)
-    line(graphX, graphY, graphX, graphY - graphHeight);
-    // Вісь t (час)
-    line(graphX, graphY, width - 50, graphY);
-    
-    // Стрілки осі
-    line(graphX, graphY - graphHeight, graphX - 5, graphY - graphHeight + 10);
-    line(graphX, graphY - graphHeight, graphX + 5, graphY - graphHeight + 10);
-    line(width - 50, graphY, width - 60, graphY - 5);
-    line(width - 50, graphY, width - 60, graphY + 5);
-
-    // Підписи осей
-    push();
-    fill(0);
-    noStroke();
-    textAlign(RIGHT);
-    textSize(14);
-    text("l, м", graphX - 10, graphY - graphHeight + 10);
-    textAlign(CENTER);
-    text("t, с", width - 50, graphY + 20);
-    text("0", graphX - 10, graphY + 15);
-    pop();
-
-    // АНТИФІЗИЧНА ПОМИЛКА:
-    // Незважаючи на рух автомобіля, шлях на графіку не змінюється.
-    let currentPath = 40; // Стале значення шляху (аномалія)
-    pathPoints.push({ x: graphX + time, y: graphY - currentPath });
-
-    // Малювання лінії графіка
-    stroke(0, 0, 255); // Синій колір для графіка
-    strokeWeight(3);
-    noFill();
-    beginShape();
-    for (let p of pathPoints) {
-        vertex(p.x, p.y);
-    }
-    endShape();
-
-    // Логіка часу графіка
-    time += 1; // Збільшуємо час
-    // Зупиняємо графік, коли він дійде до краю осі
-    if (graphX + time > width - 50) {
-        time = 0;
         pathPoints = [];
+        time = 0;
     }
+
+    drawEnvironment();
+    drawGraph();
+    drawCar(carX, carY);
+    drawSpeedometer();
+}
+
+function drawEnvironment() {
+    noStroke();
+    fill(180, 200, 215); 
+    rect(0, 0, width, height * 0.6);
+    fill(220, 225, 230);
+    rect(0, height * 0.6, width, height * 0.4);
+    
+    // Дорога
+    fill(60, 75, 85);
+    rect(0, carY + 25, width, 80);
+    
+    stroke(255, 120);
+    strokeWeight(3);
+    for (let i = 0; i < width; i += 100) {
+        line(i, carY + 65, i + 50, carY + 65);
+    }
+}
+
+function drawCar(x, y) {
+    push();
+    translate(x, y);
+    
+    noStroke();
+    fill(0, 30);
+    ellipse(carWidth/2 + 5, carHeight + 5, carWidth * 0.9, 10);
+    
+    fill(40);
+    rect(0, 25, carWidth, 12, 3);
+
+    fill(180, 0, 0); 
+    stroke(100, 0, 0);
+    strokeWeight(1.5);
+    rect(2, 12, carWidth - 4, 18, 10, 15, 2, 2); 
+
+    fill(200, 20, 20);
+    beginShape();
+    vertex(25, 12); vertex(35, 0); vertex(carWidth - 35, 0); vertex(carWidth - 15, 12);
+    endShape(CLOSE);
+
+    fill(160, 210, 255);
+    stroke(80, 120, 160);
+    strokeWeight(1);
+    beginShape();
+    vertex(30, 10); vertex(38, 2); vertex(carWidth - 38, 2); vertex(carWidth - 22, 10);
+    endShape(CLOSE);
+    
+    noStroke();
+    fill(255, 255, 200);
+    ellipse(carWidth - 8, 18, 12, 6);
+    if (speedKmH > 0) {
+        fill(255, 255, 150, 40);
+        arc(carWidth - 5, 18, 100, 60, -PI/4, PI/4);
+    }
+
+    fill(20);
+    let wheelRotation = (x % 100) / 100 * TWO_PI * 5;
+    for (let offset of [25, carWidth - 25]) {
+        push();
+        translate(offset, carHeight + 2);
+        rotate(wheelRotation);
+        fill(25); ellipse(0, 0, 26, 26);
+        fill(180); ellipse(0, 0, 16, 16);
+        stroke(100); line(-8, 0, 8, 0); line(0, -8, 0, 8);
+        pop();
+    }
+    pop();
+}
+
+function drawGraph() {
+    // Підкладка
+    fill(255, 252);
+    noStroke();
+    rect(graphX - 40, graphY - graphH - 50, graphW + 100, graphH + 110, 20);
+    
+    stroke(80, 100, 120);
+    strokeWeight(3);
+    // Вісь Y
+    line(graphX, graphY, graphX, graphY - graphH - 20);
+    // Вісь X
+    line(graphX, graphY, graphX + graphW + 20, graphY);
+
+    // Стрілки
+    fill(80, 100, 120); noStroke();
+    triangle(graphX - 7, graphY - graphH - 20, graphX + 7, graphY - graphH - 20, graphX, graphY - graphH - 35);
+    triangle(graphX + graphW + 20, graphY - 7, graphX + graphW + 20, graphY + 7, graphX + graphW + 35, graphY);
+
+    // Текст
+    fill(50, 70, 90);
+    textSize(20);
+    textStyle(BOLD);
+    textAlign(RIGHT);
+    text("l, м", graphX - 15, graphY - graphH - 10);
+    textAlign(CENTER);
+    text("t, с", graphX + graphW + 30, graphY + 40);
+    textStyle(NORMAL);
+
+    let anomalyHeight = map(speedKmH, 0, 180, 10, graphH - 10);
+    if (time < graphW) {
+        pathPoints.push({x: graphX + time, y: graphY - anomalyHeight});
+        time += 2;
+    }
+
+    noFill();
+    stroke(240, 50, 50);
+    strokeWeight(5);
+    beginShape();
+    for(let p of pathPoints) vertex(p.x, p.y);
+    endShape();
+    
+    if (pathPoints.length > 0) {
+        let last = pathPoints[pathPoints.length - 1];
+        fill(240, 50, 50); ellipse(last.x, last.y, 10, 10);
+    }
+}
+
+function drawSpeedometer() {
+    push();
+    // Позиція в правому верхньому куті
+    translate(width - 120, 120); 
+    scale(1.2); // Трішки збільшений для дошки
+    
+    stroke(40, 50, 60);
+    strokeWeight(4);
+    fill(255);
+    ellipse(0, 0, 110, 110);
+    fill(245, 248, 250);
+    stroke(220);
+    ellipse(0, 0, 100, 100);
+
+    textAlign(CENTER, CENTER);
+    textSize(9);
+    fill(50);
+    for (let i = 0; i <= 180; i += 20) {
+        let angle = map(i, 0, 180, PI * 0.75, PI * 2.25);
+        stroke(80); strokeWeight(2);
+        line(cos(angle)*40, sin(angle)*40, cos(angle)*48, sin(angle)*48);
+        noStroke();
+        text(i, cos(angle) * 32, sin(angle) * 32);
+    }
+
+    let needleAngle = map(speedKmH, 0, 180, PI * 0.75, PI * 2.25);
+    stroke(200, 0, 0); strokeWeight(4);
+    line(0, 0, cos(needleAngle) * 44, sin(needleAngle) * 44);
+    fill(60); ellipse(0, 0, 12, 12);
+    pop();
 }
 </script>
 
